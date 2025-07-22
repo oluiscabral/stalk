@@ -1,0 +1,22 @@
+{
+  "name": "gus",
+  "version": "1.0.0",
+  "description": "Script to unfollow GitHub users who don't follow back",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js",
+    "dry-run": "node main.js --dry-run"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.0.2",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": [
+    "github",
+    "api",
+    "unfollow"
+  ],
+  "author": "oluiscabral",
+  "license": "MIT"
+}
