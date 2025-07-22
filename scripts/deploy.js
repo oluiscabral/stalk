@@ -122,7 +122,6 @@ class DeployManager {
     }
     
     console.log(`🎉 Deployment completed! Version: ${newVersion}`);
-    console.log(`📦 Build files are ready in the 'dist' directory`);
     
     return newVersion;
   }

@@ -1,6 +1,6 @@
 {
   "name": "gus",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Script to unfollow GitHub users who don't follow back",
   "main": "main.js",
   "type": "module",
