@@ -43,7 +43,7 @@ class GitHubUnfollower {
 
     while (true) {
       try {
-        const { data } = await this.octokit.rest.users.listFollowingForAuthenticatedUser({
+        const { data } = await this.octokit.rest.users.listFollowedByAuthenticatedUser({
           per_page: 100,
           page: page,
         });
