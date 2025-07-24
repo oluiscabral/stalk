@@ -1,7 +1,7 @@
 {
-  "name": "gmf",
-  "version": "2.0.1",
-  "description": "GitHub Mutual Follow Manager - Automatically manage mutual following relationships",
+  "name": "stalk",
+  "version": "2.0.0",
+  "description": "Stalk - Social Tracking & Auto-Link Kit - Automatically manage mutual following relationships on GitHub",
   "main": "main.js",
   "type": "module",
   "scripts": {
@@ -29,8 +29,19 @@
     "follow",
     "unfollow",
     "mutual",
-    "automation"
+    "automation",
+    "stalk",
+    "social",
+    "tracking"
   ],
   "author": "oluiscabral",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oluiscabral/stalk.git"
+  },
+  "homepage": "https://github.com/oluiscabral/stalk#readme",
+  "bugs": {
+    "url": "https://github.com/oluiscabral/stalk/issues"
+  }
 }
