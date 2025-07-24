@@ -1,6 +1,6 @@
 {
   "name": "stalk",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Stalk - Social Tracking & Auto-Link Kit - Automatically manage mutual following relationships on GitHub",
   "main": "main.js",
   "type": "module",

@@ -22,6 +22,7 @@ class StalkManager {
     this.followedInSession = new Set(); // Track users followed in this stalking session
     this.maxDepth = 3; // Maximum stalking recursion depth for safety
     this.maxFollowsPerUser = 50; // Maximum followers to stalk per user
+    this.dfsStats = { totalProcessed: 0, totalFollowed: 0, maxDepthReached: 0 };
   }
 
   getTargetUser() {
@@ -40,7 +41,7 @@ class StalkManager {
       // Get authenticated user info
       const { data: user } = await this.octokit.rest.users.getAuthenticated();
       this.username = user.login;
-      console.log(`🕵️ Stalk - Social Tracking & Auto-Link Kit`);
+      console.log("🕵️ Stalk - Social Tracking & Auto-Link Kit");
       console.log(`🔐 Authenticated as: ${this.username}`);
       console.log(`📊 Public repos: ${user.public_repos} | Followers: ${user.followers} | Following: ${user.following}`);
 
@@ -54,7 +55,8 @@ class StalkManager {
         if (!this.targetUser) {
           throw new Error("Ambitious stalking mode requires a target username. Usage: --ambitious [username] or -a [username]");
         }
-        console.log(`🚀 AMBITIOUS STALKING MODE ENABLED - Will recursively stalk followers of: ${this.targetUser}`);
+        console.log(`🚀 AMBITIOUS STALKING MODE ENABLED - Will use DFS to recursively stalk followers of: ${this.targetUser}`);
+        console.log(`🌳 DFS Algorithm: Depth-First Search traversal for maximum stalking efficiency`);
         console.log(`📏 Max stalking depth: ${this.maxDepth} levels | Max per target: ${this.maxFollowsPerUser} followers`);
       }
       
@@ -217,20 +219,38 @@ class StalkManager {
     }
   }
 
-  async recursiveStalk(username, currentFollowing, depth = 0, maxDepth = this.maxDepth) {
+  /**
+   * DFS (Depth-First Search) Stalking Algorithm
+   * 
+   * This implements a true depth-first traversal where we:
+   * 1. Visit a user (follow them)
+   * 2. Immediately explore their followers deeply (recursively)
+   * 3. Only move to the next sibling after fully exploring the current branch
+   * 
+   * DFS ensures we exhaust each stalking path completely before backtracking
+   */
+  async dfsStalk(username, currentFollowing, depth = 0, maxDepth = this.maxDepth, path = []) {
+    // Update DFS statistics
+    this.dfsStats.totalProcessed++;
+    this.dfsStats.maxDepthReached = Math.max(this.dfsStats.maxDepthReached, depth);
+
+    // Base cases for DFS termination
     if (depth >= maxDepth) {
-      console.log(`   🛑 Max stalking depth (${maxDepth}) reached for ${username}`);
+      console.log(`   🛑 DFS: Max stalking depth (${maxDepth}) reached for ${username}`);
       return { followed: 0, skipped: 0 };
     }
 
     if (this.processedUsers.has(username)) {
-      console.log(`   🔄 Already processed ${username}, skipping to avoid stalking cycles`);
+      console.log(`   🔄 DFS: Already processed ${username}, skipping to avoid stalking cycles`);
       return { followed: 0, skipped: 0 };
     }
 
+    // Mark as processed to prevent cycles
     this.processedUsers.add(username);
     
-    console.log(`\n${'  '.repeat(depth)}🎯 Processing ${username} (stalking depth: ${depth})`);
+    // DFS Path visualization
+    const pathStr = path.length > 0 ? ` (path: ${path.join(' → ')} → ${username})` : '';
+    console.log(`\n${'  '.repeat(depth)}🌳 DFS: Processing ${username} at depth ${depth}${pathStr}`);
     
     // Get stalking targets from this user
     const followers = await this.getUserFollowers(username);
@@ -238,38 +258,51 @@ class StalkManager {
     let followedCount = 0;
     let skippedCount = 0;
 
-    for (const follower of followers) {
+    // DFS: Process each follower completely before moving to the next
+    for (let i = 0; i < followers.length; i++) {
+      const follower = followers[i];
+      
       // Skip if it's ourselves (no self-stalking)
       if (follower === this.username) {
+        console.log(`${'  '.repeat(depth + 1)}⏭️  DFS: Skipping self (${follower})`);
         continue;
       }
 
       // Skip if we already stalk them or stalked them in this session
       if (currentFollowing.has(follower) || this.followedInSession.has(follower)) {
+        console.log(`${'  '.repeat(depth + 1)}⏭️  DFS: Already stalking ${follower}, skipping`);
         skippedCount++;
         continue;
       }
 
-      console.log(`${'  '.repeat(depth + 1)}[${followedCount + 1}/${followers.length}] Stalking: ${follower}`);
+      console.log(`${'  '.repeat(depth + 1)}🎯 DFS: [${i + 1}/${followers.length}] Stalking: ${follower}`);
       
+      // Follow the user (visit the node)
       const success = await this.followUser(follower);
       if (success) {
         followedCount++;
+        this.dfsStats.totalFollowed++;
         currentFollowing.add(follower); // Update our stalking tracking set
         
-        // Rate limiting for ambitious stalking mode
+        // Rate limiting for DFS stalking mode
         await this.sleep(1500);
         
-        // Recursively stalk this user's followers (depth-first stalking)
-        const recursiveResult = await this.recursiveStalk(follower, currentFollowing, depth + 1, maxDepth);
+        // DFS: IMMEDIATELY explore this user's followers deeply before moving to next sibling
+        console.log(`${'  '.repeat(depth + 1)}🌳 DFS: Diving deeper into ${follower}'s network...`);
+        const newPath = [...path, username];
+        const recursiveResult = await this.dfsStalk(follower, currentFollowing, depth + 1, maxDepth, newPath);
+        
         followedCount += recursiveResult.followed;
         skippedCount += recursiveResult.skipped;
+        
+        console.log(`${'  '.repeat(depth + 1)}🔙 DFS: Backtracking from ${follower} (followed: ${recursiveResult.followed}, skipped: ${recursiveResult.skipped})`);
       } else {
+        console.log(`${'  '.repeat(depth + 1)}❌ DFS: Failed to stalk ${follower}, continuing DFS traversal`);
         skippedCount++;
       }
     }
 
-    console.log(`${'  '.repeat(depth)}📊 ${username} stalking results: ${followedCount} followed, ${skippedCount} skipped`);
+    console.log(`${'  '.repeat(depth)}📊 DFS: ${username} complete - followed: ${followedCount}, skipped: ${skippedCount} (depth: ${depth})`);
     return { followed: followedCount, skipped: skippedCount };
   }
 
@@ -301,7 +334,7 @@ class StalkManager {
       console.log(`   Need to stop one-sided stalking: ${toUnfollow.length}`);
       
       if (this.isAmbitious) {
-        console.log(`   🚀 Ambitious stalking: Will recursively stalk followers of ${this.targetUser}`);
+        console.log(`   🌳 DFS stalking: Will use Depth-First Search to recursively stalk followers of ${this.targetUser}`);
       }
       console.log("");
 
@@ -337,8 +370,8 @@ class StalkManager {
       let followFailCount = 0;
       let unfollowSuccessCount = 0;
       let unfollowFailCount = 0;
-      let ambitiousStalkCount = 0;
-      let ambitiousSkipCount = 0;
+      let dfsStalkCount = 0;
+      let dfsSkipCount = 0;
 
       // Stalk back users who stalk you
       if (toFollow.length > 0) {
@@ -388,24 +421,36 @@ class StalkManager {
         console.log("");
       }
 
-      // Ambitious recursive stalking
+      // DFS Ambitious recursive stalking
       if (this.isAmbitious && this.targetUser) {
-        console.log("🚀 Starting ambitious recursive stalking...\n");
-        console.log(`🎯 Primary stalking target: ${this.targetUser}`);
-        console.log(`📏 Max stalking depth: ${this.maxDepth} | Max per target: ${this.maxFollowsPerUser}`);
+        console.log("🌳 Starting DFS (Depth-First Search) ambitious stalking...\n");
+        console.log(`🎯 DFS Root Node: ${this.targetUser}`);
+        console.log(`📏 DFS Parameters: Max depth: ${this.maxDepth} | Max per node: ${this.maxFollowsPerUser}`);
+        console.log(`🧠 DFS Algorithm: Will explore each stalking path completely before backtracking`);
         console.log(`⚠️  This may take a while and use significant API quota...\n`);
 
         if (!this.isDryRun) {
-          console.log("⏳ Starting ambitious stalking mode in 5 seconds...");
+          console.log("⏳ Starting DFS stalking mode in 5 seconds...");
           await this.sleep(5000);
         }
 
+        // Reset DFS statistics
+        this.dfsStats = { totalProcessed: 0, totalFollowed: 0, maxDepthReached: 0 };
+
         try {
-          const ambitiousResult = await this.recursiveStalk(this.targetUser, followingSet);
-          ambitiousStalkCount = ambitiousResult.followed;
-          ambitiousSkipCount = ambitiousResult.skipped;
+          console.log("🌳 DFS: Beginning depth-first traversal from root node...\n");
+          const dfsResult = await this.dfsStalk(this.targetUser, followingSet);
+          dfsStalkCount = dfsResult.followed;
+          dfsSkipCount = dfsResult.skipped;
+          
+          console.log("\n🌳 DFS Traversal Complete!");
+          console.log(`📊 DFS Statistics:`);
+          console.log(`   🔍 Total nodes processed: ${this.dfsStats.totalProcessed}`);
+          console.log(`   ✅ Total users followed: ${this.dfsStats.totalFollowed}`);
+          console.log(`   📏 Maximum depth reached: ${this.dfsStats.maxDepthReached}`);
+          console.log(`   🌳 DFS paths explored: ${this.processedUsers.size}`);
         } catch (error) {
-          console.log(`❌ Ambitious stalking error: ${error.message}`);
+          console.log(`❌ DFS stalking error: ${error.message}`);
         }
       }
 
@@ -416,9 +461,10 @@ class StalkManager {
       console.log(`   ❌ Failed to stop stalking: ${unfollowFailCount}`);
       
       if (this.isAmbitious) {
-        console.log(`   🚀 Ambitious stalking follows: ${ambitiousStalkCount}`);
-        console.log(`   ⏭️  Ambitious stalking skipped: ${ambitiousSkipCount}`);
-        console.log(`   👥 Total stalked users: ${this.processedUsers.size}`);
+        console.log(`   🌳 DFS stalking follows: ${dfsStalkCount}`);
+        console.log(`   ⏭️  DFS stalking skipped: ${dfsSkipCount}`);
+        console.log(`   🔍 Total DFS nodes processed: ${this.dfsStats.totalProcessed}`);
+        console.log(`   📏 Maximum DFS depth reached: ${this.dfsStats.maxDepthReached}`);
       }
 
       if (this.isDryRun) {
@@ -431,7 +477,8 @@ class StalkManager {
       } else {
         console.log("\n🎉 Stalking operations complete!");
         if (this.isAmbitious) {
-          console.log(`💡 Recursively stalked ${ambitiousStalkCount} users from ${this.targetUser}'s network.`);
+          console.log(`💡 Used DFS algorithm to recursively stalk ${dfsStalkCount} users from ${this.targetUser}'s network.`);
+          console.log(`🌳 DFS explored ${this.dfsStats.totalProcessed} nodes with maximum depth of ${this.dfsStats.maxDepthReached}.`);
         } else {
           console.log("💡 You now have mutual stalking relationships with all your connections.");
         }
@@ -457,8 +504,8 @@ async function main() {
     console.log("\n🚀 Stalk Usage:");
     console.log("   npm start                           # Normal mutual stalking mode");
     console.log("   npm run dry-run                     # Preview stalking strategy");
-    console.log("   node main.js --ambitious username   # Recursive stalking mode");
-    console.log("   node main.js -a username            # Short form ambitious stalking");
+    console.log("   node main.js --ambitious username   # DFS recursive stalking mode");
+    console.log("   node main.js -a username            # Short form DFS ambitious stalking");
     console.log("\n🕵️ Repository: https://github.com/oluiscabral/stalk");
     process.exit(1);
   }

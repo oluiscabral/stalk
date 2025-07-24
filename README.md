@@ -253,4 +253,25 @@ Your GitHub token needs the `user:follow` scope to:
 - If you hit limits, wait an hour and try again
 - Consider reducing `maxFollowsPerUser` for large stalking operations
 
-**"Perfect!
+**"Perfect! You have mutual following with everyone" message:**
+- This means your account already has mutual relationships
+- No changes are needed for standard stalking mode
+- Ambitious stalking mode will still run if specified
+
+## 🤝 Contributing (Join the Stalking Community)
+
+Stalk is designed to be powerful yet safe. If you have suggestions for improvements to our stalking algorithms, please open an issue or submit a pull request.
+
+## 📄 License
+
+MIT License - feel free to use Stalk for your GitHub account management and strategic network stalking needs!
+
+## ⭐ Star This Repo!
+
+If Stalk helped you build your GitHub network (or if you just appreciate the honest branding), give it a star! ⭐
+
+---
+
+**⚠️ Important**: Ambitious stalking mode can follow many users quickly. Always test with `--dry-run` first and use responsibly to avoid appearing as spam to other users. Remember: We're all stalking, but let's be classy about it.
+
+**🕵️ Disclaimer**: Stalk is a legitimate GitHub automation tool. The "stalking" terminology is used humorously to acknowledge what we're all actually doing when we browse GitHub profiles and follow interesting developers. Use responsibly and respect others' privacy and GitHub's terms of service.
