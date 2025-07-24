@@ -25,6 +25,10 @@ class StalkManager {
     this.maxDepth = this.parseMaxDepth();
     this.maxFollowsPerUser = this.parseMaxFollows();
     
+    // Parse optional operation controls
+    this.skipFollowBack = process.argv.includes("--skip-follow-back");
+    this.skipUnfollow = process.argv.includes("--skip-unfollow");
+    
     this.dfsStats = { totalProcessed: 0, totalFollowed: 0, maxDepthReached: 0 };
   }
 
@@ -90,7 +94,7 @@ class StalkManager {
       // Get authenticated user info
       const { data: user } = await this.octokit.rest.users.getAuthenticated();
       this.username = user.login;
-      console.log("🕵️ Stalk - Social Tracking & Auto-Link Kit");
+      console.log("🕵️ Stalk v1.0.8 - Social Tracking & Auto-Link Kit");
       console.log(`🔐 Authenticated as: ${this.username}`);
       console.log(`📊 Public repos: ${user.public_repos} | Followers: ${user.followers} | Following: ${user.following}`);
 
@@ -98,6 +102,17 @@ class StalkManager {
         console.log("🔍 DRY RUN MODE - No actual stalking will occur (just planning)");
       } else {
         console.log("⚠️  LIVE STALKING MODE - Users will be followed/unfollowed");
+      }
+
+      // Display optional operation controls
+      if (this.skipFollowBack || this.skipUnfollow) {
+        console.log("🎛️  OPTIONAL OPERATIONS:");
+        if (this.skipFollowBack) {
+          console.log("   ⏭️  Following back: DISABLED (will skip mutual stalking)");
+        }
+        if (this.skipUnfollow) {
+          console.log("   ⏭️  Unfollowing: DISABLED (will skip stopping one-sided stalking)");
+        }
       }
 
       if (this.isAmbitious) {
@@ -391,8 +406,8 @@ class StalkManager {
       console.log("📊 Stalking Analysis Results:");
       console.log(`   Currently stalking: ${following.length}`);
       console.log(`   Your stalkers: ${followers.length}`);
-      console.log(`   Need to stalk back: ${toFollow.length}`);
-      console.log(`   Need to stop one-sided stalking: ${toUnfollow.length}`);
+      console.log(`   Need to stalk back: ${toFollow.length}${this.skipFollowBack ? ' (SKIPPED)' : ''}`);
+      console.log(`   Need to stop one-sided stalking: ${toUnfollow.length}${this.skipUnfollow ? ' (SKIPPED)' : ''}`);
       
       if (this.isAmbitious) {
         console.log(`   🌳 DFS stalking: Will use Depth-First Search to recursively stalk followers of ${this.targetUser}`);
@@ -401,26 +416,44 @@ class StalkManager {
       }
       console.log("");
 
-      // Show users to stalk back
-      if (toFollow.length > 0) {
+      // Show users to stalk back (only if not skipped)
+      if (toFollow.length > 0 && !this.skipFollowBack) {
         console.log("➕ Users to stalk back (they stalk you, but you don't stalk them):");
         toFollow.forEach((user, index) => {
           console.log(`   ${index + 1}. ${user}`);
         });
         console.log("");
+      } else if (toFollow.length > 0 && this.skipFollowBack) {
+        console.log("⏭️  Skipping following back operations (--skip-follow-back enabled)");
+        console.log(`   Would have stalked back ${toFollow.length} users: ${toFollow.slice(0, 5).join(', ')}${toFollow.length > 5 ? '...' : ''}`);
+        console.log("");
       }
 
-      // Show users to stop stalking
-      if (toUnfollow.length > 0) {
+      // Show users to stop stalking (only if not skipped)
+      if (toUnfollow.length > 0 && !this.skipUnfollow) {
         console.log("➖ Users to stop stalking (you stalk them, but they don't stalk you):");
         toUnfollow.forEach((user, index) => {
           console.log(`   ${index + 1}. ${user}`);
         });
         console.log("");
+      } else if (toUnfollow.length > 0 && this.skipUnfollow) {
+        console.log("⏭️  Skipping unfollowing operations (--skip-unfollow enabled)");
+        console.log(`   Would have stopped stalking ${toUnfollow.length} users: ${toUnfollow.slice(0, 5).join(', ')}${toUnfollow.length > 5 ? '...' : ''}`);
+        console.log("");
       }
 
       if (toFollow.length === 0 && toUnfollow.length === 0 && !this.isAmbitious) {
         console.log("🎉 Perfect! You have mutual stalking relationships with everyone.");
+        return;
+      }
+
+      // Check if all operations are skipped
+      const followBackSkipped = this.skipFollowBack || toFollow.length === 0;
+      const unfollowSkipped = this.skipUnfollow || toUnfollow.length === 0;
+      
+      if (followBackSkipped && unfollowSkipped && !this.isAmbitious) {
+        console.log("⏭️  All mutual stalking operations are skipped or not needed.");
+        console.log("💡 Use --ambitious [username] for DFS recursive stalking, or remove skip flags for mutual stalking.");
         return;
       }
 
@@ -436,8 +469,8 @@ class StalkManager {
       let dfsStalkCount = 0;
       let dfsSkipCount = 0;
 
-      // Stalk back users who stalk you
-      if (toFollow.length > 0) {
+      // Stalk back users who stalk you (only if not skipped)
+      if (toFollow.length > 0 && !this.skipFollowBack) {
         console.log("🚀 Stalking back users...\n");
         
         for (let i = 0; i < toFollow.length; i++) {
@@ -460,8 +493,8 @@ class StalkManager {
         console.log("");
       }
 
-      // Stop stalking users who don't stalk back
-      if (toUnfollow.length > 0) {
+      // Stop stalking users who don't stalk back (only if not skipped)
+      if (toUnfollow.length > 0 && !this.skipUnfollow) {
         console.log("🚀 Stopping one-sided stalking...\n");
         
         for (let i = 0; i < toUnfollow.length; i++) {
@@ -524,10 +557,19 @@ class StalkManager {
       }
 
       console.log("📊 Final Stalking Results:");
-      console.log(`   ➕ Successfully stalked back: ${followSuccessCount}`);
-      console.log(`   ❌ Failed to stalk back: ${followFailCount}`);
-      console.log(`   ➖ Successfully stopped stalking: ${unfollowSuccessCount}`);
-      console.log(`   ❌ Failed to stop stalking: ${unfollowFailCount}`);
+      if (!this.skipFollowBack) {
+        console.log(`   ➕ Successfully stalked back: ${followSuccessCount}`);
+        console.log(`   ❌ Failed to stalk back: ${followFailCount}`);
+      } else {
+        console.log(`   ⏭️  Following back: SKIPPED (${toFollow.length} users)`);
+      }
+      
+      if (!this.skipUnfollow) {
+        console.log(`   ➖ Successfully stopped stalking: ${unfollowSuccessCount}`);
+        console.log(`   ❌ Failed to stop stalking: ${unfollowFailCount}`);
+      } else {
+        console.log(`   ⏭️  Unfollowing: SKIPPED (${toUnfollow.length} users)`);
+      }
       
       if (this.isAmbitious) {
         console.log(`   🌳 DFS stalking follows: ${dfsStalkCount}`);
@@ -539,9 +581,19 @@ class StalkManager {
       if (this.isDryRun) {
         console.log("\n🔍 This was a dry run. To actually start stalking, run:");
         if (this.isAmbitious) {
-          console.log(`   node main.js --ambitious ${this.targetUser}${this.maxDepth !== Infinity ? ` --max-depth ${this.maxDepth}` : ''}${this.maxFollowsPerUser !== Infinity ? ` --max-follows ${this.maxFollowsPerUser}` : ''}`);
+          const skipFlags = [];
+          if (this.skipFollowBack) skipFlags.push('--skip-follow-back');
+          if (this.skipUnfollow) skipFlags.push('--skip-unfollow');
+          const depthFlag = this.maxDepth !== Infinity ? ` --max-depth ${this.maxDepth}` : '';
+          const followsFlag = this.maxFollowsPerUser !== Infinity ? ` --max-follows ${this.maxFollowsPerUser}` : '';
+          const skipFlagsStr = skipFlags.length > 0 ? ` ${skipFlags.join(' ')}` : '';
+          console.log(`   node main.js --ambitious ${this.targetUser}${depthFlag}${followsFlag}${skipFlagsStr}`);
         } else {
-          console.log("   npm start");
+          const skipFlags = [];
+          if (this.skipFollowBack) skipFlags.push('--skip-follow-back');
+          if (this.skipUnfollow) skipFlags.push('--skip-unfollow');
+          const skipFlagsStr = skipFlags.length > 0 ? ` ${skipFlags.join(' ')}` : '';
+          console.log(`   npm start${skipFlagsStr}`);
         }
       } else {
         console.log("\n🎉 Stalking operations complete!");
@@ -549,7 +601,14 @@ class StalkManager {
           console.log(`💡 Used DFS algorithm to recursively stalk ${dfsStalkCount} users from ${this.targetUser}'s network.`);
           console.log(`🌳 DFS explored ${this.dfsStats.totalProcessed} nodes with maximum depth of ${this.dfsStats.maxDepthReached}.`);
         } else {
-          console.log("💡 You now have mutual stalking relationships with all your connections.");
+          const operations = [];
+          if (!this.skipFollowBack && followSuccessCount > 0) operations.push(`followed back ${followSuccessCount} users`);
+          if (!this.skipUnfollow && unfollowSuccessCount > 0) operations.push(`stopped stalking ${unfollowSuccessCount} users`);
+          if (operations.length > 0) {
+            console.log(`💡 Successfully ${operations.join(' and ')}.`);
+          } else {
+            console.log("💡 No stalking operations were performed (all skipped or not needed).");
+          }
         }
       }
     } catch (error) {
@@ -573,11 +632,18 @@ async function main() {
     console.log("\n🚀 Stalk Usage:");
     console.log("   npm start                                    # Normal mutual stalking mode");
     console.log("   npm run dry-run                              # Preview stalking strategy");
+    console.log("   node main.js --skip-follow-back              # Skip following back, only unfollow");
+    console.log("   node main.js --skip-unfollow                 # Skip unfollowing, only follow back");
+    console.log("   node main.js --skip-follow-back --skip-unfollow  # Skip both (analysis only)");
     console.log("   node main.js --ambitious username            # DFS recursive stalking mode (infinite depth & follows)");
     console.log("   node main.js -a username                     # Short form DFS ambitious stalking");
     console.log("   node main.js -a username --max-depth 5       # DFS with depth limit of 5");
     console.log("   node main.js -a username --max-follows 100   # DFS with 100 follows per user limit");
     console.log("   node main.js -a username --max-depth 3 --max-follows 50  # DFS with both limits");
+    console.log("   node main.js -a username --skip-follow-back  # DFS only, skip mutual stalking");
+    console.log("\n🎛️  Optional Operation Controls:");
+    console.log("   --skip-follow-back    # Skip following back users who follow you");
+    console.log("   --skip-unfollow       # Skip unfollowing users who don't follow back");
     console.log("\n🌳 DFS Parameters:");
     console.log("   --max-depth N     # Maximum stalking depth (default: infinite ∞)");
     console.log("   --max-follows N   # Maximum followers to stalk per user (default: infinite ∞)");
