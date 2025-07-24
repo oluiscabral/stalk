@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-class GitHubUnfollower {
+class GitHubMutualFollowManager {
   constructor(token) {
     if (!token) {
       throw new Error("GitHub token is required. Please set GITHUB_TOKEN in your .env file");
@@ -27,9 +27,9 @@ class GitHubUnfollower {
       console.log(`📊 Public repos: ${user.public_repos} | Followers: ${user.followers} | Following: ${user.following}`);
 
       if (this.isDryRun) {
-        console.log("🔍 DRY RUN MODE - No actual unfollowing will occur\n");
+        console.log("🔍 DRY RUN MODE - No actual following/unfollowing will occur\n");
       } else {
-        console.log("⚠️  LIVE MODE - Users will be unfollowed\n");
+        console.log("⚠️  LIVE MODE - Users will be followed/unfollowed\n");
       }
     } catch (error) {
       throw new Error(`Failed to authenticate: ${error.message}`);
@@ -94,6 +94,25 @@ class GitHubUnfollower {
     return followers;
   }
 
+  async followUser(username) {
+    try {
+      if (this.isDryRun) {
+        console.log(`   🔍 [DRY RUN] Would follow: ${username}`);
+        return true;
+      }
+
+      await this.octokit.rest.users.follow({
+        username: username,
+      });
+
+      console.log(`   ✅ Followed: ${username}`);
+      return true;
+    } catch (error) {
+      console.log(`   ❌ Failed to follow ${username}: ${error.message}`);
+      return false;
+    }
+  }
+
   async unfollowUser(username) {
     try {
       if (this.isDryRun) {
@@ -124,65 +143,114 @@ class GitHubUnfollower {
       // Get all users you follow and all your followers
       const [following, followers] = await Promise.all([this.getAllFollowing(), this.getAllFollowers()]);
 
-      // Create a Set of followers for faster lookup
+      // Create Sets for faster lookup
+      const followingSet = new Set(following);
       const followersSet = new Set(followers);
 
+      // Find users who follow you but you don't follow back
+      const toFollow = followers.filter((user) => !followingSet.has(user));
+
       // Find users you follow who don't follow you back
-      const nonFollowBacks = following.filter((user) => !followersSet.has(user));
+      const toUnfollow = following.filter((user) => !followersSet.has(user));
 
       console.log("📊 Analysis Results:");
       console.log(`   Following: ${following.length}`);
       console.log(`   Followers: ${followers.length}`);
-      console.log(`   Non-follow backs: ${nonFollowBacks.length}\n`);
+      console.log(`   Need to follow back: ${toFollow.length}`);
+      console.log(`   Need to unfollow: ${toUnfollow.length}\n`);
 
-      if (nonFollowBacks.length === 0) {
-        console.log("🎉 Great! Everyone you follow also follows you back.");
+      // Show users to follow back
+      if (toFollow.length > 0) {
+        console.log("➕ Users to follow back (they follow you, but you don't follow them):");
+        toFollow.forEach((user, index) => {
+          console.log(`   ${index + 1}. ${user}`);
+        });
+        console.log("");
+      }
+
+      // Show users to unfollow
+      if (toUnfollow.length > 0) {
+        console.log("➖ Users to unfollow (you follow them, but they don't follow you):");
+        toUnfollow.forEach((user, index) => {
+          console.log(`   ${index + 1}. ${user}`);
+        });
+        console.log("");
+      }
+
+      if (toFollow.length === 0 && toUnfollow.length === 0) {
+        console.log("🎉 Perfect! You have mutual following with everyone.");
         return;
       }
 
-      console.log("👥 Users who don't follow you back:");
-      nonFollowBacks.forEach((user, index) => {
-        console.log(`   ${index + 1}. ${user}`);
-      });
-      console.log("");
-
       if (!this.isDryRun) {
-        console.log("⚠️  Starting to unfollow in 3 seconds...");
+        console.log("⚠️  Starting mutual follow management in 3 seconds...");
         await this.sleep(3000);
       }
 
-      console.log("🚀 Processing unfollows...\n");
+      let followSuccessCount = 0;
+      let followFailCount = 0;
+      let unfollowSuccessCount = 0;
+      let unfollowFailCount = 0;
 
-      let successCount = 0;
-      let failCount = 0;
+      // Follow back users who follow you
+      if (toFollow.length > 0) {
+        console.log("🚀 Following back users...\n");
+        
+        for (let i = 0; i < toFollow.length; i++) {
+          const user = toFollow[i];
+          console.log(`[${i + 1}/${toFollow.length}] Following back: ${user}`);
 
-      for (let i = 0; i < nonFollowBacks.length; i++) {
-        const user = nonFollowBacks[i];
-        console.log(`[${i + 1}/${nonFollowBacks.length}] Processing: ${user}`);
+          const success = await this.followUser(user);
+          if (success) {
+            followSuccessCount++;
+          } else {
+            followFailCount++;
+          }
 
-        const success = await this.unfollowUser(user);
-        if (success) {
-          successCount++;
-        } else {
-          failCount++;
+          // Rate limiting: GitHub allows 5000 requests per hour
+          // Being conservative with 1 second delay
+          if (!this.isDryRun && i < toFollow.length - 1) {
+            await this.sleep(1000);
+          }
         }
-
-        // Rate limiting: GitHub allows 5000 requests per hour
-        // Being conservative with 1 second delay
-        if (!this.isDryRun && i < nonFollowBacks.length - 1) {
-          await this.sleep(1000);
-        }
+        console.log("");
       }
 
-      console.log("\n📊 Final Results:");
-      console.log(`   ✅ Successfully processed: ${successCount}`);
-      console.log(`   ❌ Failed: ${failCount}`);
+      // Unfollow users who don't follow back
+      if (toUnfollow.length > 0) {
+        console.log("🚀 Unfollowing non-followers...\n");
+        
+        for (let i = 0; i < toUnfollow.length; i++) {
+          const user = toUnfollow[i];
+          console.log(`[${i + 1}/${toUnfollow.length}] Unfollowing: ${user}`);
+
+          const success = await this.unfollowUser(user);
+          if (success) {
+            unfollowSuccessCount++;
+          } else {
+            unfollowFailCount++;
+          }
+
+          // Rate limiting protection
+          if (!this.isDryRun && i < toUnfollow.length - 1) {
+            await this.sleep(1000);
+          }
+        }
+        console.log("");
+      }
+
+      console.log("📊 Final Results:");
+      console.log(`   ➕ Successfully followed back: ${followSuccessCount}`);
+      console.log(`   ❌ Failed to follow: ${followFailCount}`);
+      console.log(`   ➖ Successfully unfollowed: ${unfollowSuccessCount}`);
+      console.log(`   ❌ Failed to unfollow: ${unfollowFailCount}`);
 
       if (this.isDryRun) {
-        console.log("\n🔍 This was a dry run. To actually unfollow users, run:");
+        console.log("\n🔍 This was a dry run. To actually follow/unfollow users, run:");
         console.log("   npm start");
       } else {
-        console.log("\n🎉 Unfollowing complete!");
+        console.log("\n🎉 Mutual follow management complete!");
+        console.log("💡 You now have mutual following relationships with all your connections.");
       }
     } catch (error) {
       console.error("💥 Error:", error.message);
@@ -205,8 +273,8 @@ async function main() {
     process.exit(1);
   }
 
-  const unfollower = new GitHubUnfollower(token);
-  await unfollower.run();
+  const followManager = new GitHubMutualFollowManager(token);
+  await followManager.run();
 }
 
 main().catch(console.error);

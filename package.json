@@ -1,7 +1,7 @@
 {
-  "name": "gus",
-  "version": "1.0.6",
-  "description": "Script to unfollow GitHub users who don't follow back",
+  "name": "gmf",
+  "version": "2.0.0",
+  "description": "GitHub Mutual Follow Manager - Automatically manage mutual following relationships",
   "main": "main.js",
   "type": "module",
   "scripts": {
@@ -26,7 +26,10 @@
   "keywords": [
     "github",
     "api",
-    "unfollow"
+    "follow",
+    "unfollow",
+    "mutual",
+    "automation"
   ],
   "author": "oluiscabral",
   "license": "MIT"
