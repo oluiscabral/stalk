@@ -94,7 +94,7 @@ class StalkManager {
       // Get authenticated user info
       const { data: user } = await this.octokit.rest.users.getAuthenticated();
       this.username = user.login;
-      console.log("🕵️ Stalk v1.0.8 - Social Tracking & Auto-Link Kit");
+      console.log("🕵️ Stalk - Social Tracking & Auto-Link Kit");
       console.log(`🔐 Authenticated as: ${this.username}`);
       console.log(`📊 Public repos: ${user.public_repos} | Followers: ${user.followers} | Following: ${user.following}`);
 
