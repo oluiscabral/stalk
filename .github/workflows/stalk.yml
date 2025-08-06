@@ -1,0 +1,50 @@
+name: Stalk
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight UTC
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+        - follow-only
+        - unfollow-only
+        - both
+
+jobs:
+  stalk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run stalk script (scheduled)
+        if: github.event_name == 'schedule'
+        run: node main.js --follow-only
+        env:
+          GITHUB_TOKEN: ${{ secrets.STALK_TOKEN }}
+
+      - name: Run stalk script (manual)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.mode }}" == "follow-only" ]; then
+            node main.js --follow-only
+          elif [ "${{ github.event.inputs.mode }}" == "unfollow-only" ]; then
+            node main.js --unfollow-only
+          else
+            node main.js
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.STALK_TOKEN }}
