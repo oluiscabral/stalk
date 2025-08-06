@@ -1,12 +1,16 @@
 {
   "name": "stalk",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Stalk - Social Tracking & Auto-Link Kit - Automatically manage mutual following relationships on GitHub",
   "main": "main.js",
   "type": "module",
   "scripts": {
     "start": "node main.js",
     "dry-run": "node main.js --dry-run",
+    "follow": "node main.js --follow-only",
+    "unfollow": "node main.js --unfollow-only",
+    "dry-run:follow": "node main.js --dry-run --follow-only",
+    "dry-run:unfollow": "node main.js --dry-run --unfollow-only",
     "version:bump": "node scripts/version-manager.js bump",
     "version:major": "node scripts/version-manager.js major",
     "version:minor": "node scripts/version-manager.js minor",

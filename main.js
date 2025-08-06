@@ -690,6 +690,12 @@ async function main() {
     console.log("\n🚀 Stalk Usage:");
     console.log("   npm start                                    # Normal mutual stalking mode");
     console.log("   npm run dry-run                              # Preview stalking strategy");
+    console.log("   npm run follow                               # Follow back only");
+    console.log("   npm run unfollow                             # Unfollow non-followers only");
+    console.log("   npm run dry-run:follow                       # Preview follow back only");
+    console.log("   npm run dry-run:unfollow                     # Preview unfollow non-followers only");
+    console.log("   node main.js --follow-only                   # Follow back only");
+    console.log("   node main.js --unfollow-only                 # Unfollow non-followers only");
     console.log("   node main.js --skip-follow-back              # Skip following back, only unfollow");
     console.log("   node main.js --skip-unfollow                 # Skip unfollowing, only follow back");
     console.log("   node main.js --skip-follow-back --skip-unfollow  # Skip both (analysis only)");
@@ -700,6 +706,8 @@ async function main() {
     console.log("   node main.js -a username --max-depth 3 --max-follows 50  # BFS with both limits");
     console.log("   node main.js -a username --skip-follow-back  # BFS only, skip mutual stalking");
     console.log("\n🎛️  Optional Operation Controls:");
+    console.log("   --follow-only         # Only follow back users who follow you");
+    console.log("   --unfollow-only       # Only unfollow users who don't follow back");
     console.log("   --skip-follow-back    # Skip following back users who follow you");
     console.log("   --skip-unfollow       # Skip unfollowing users who don't follow back");
     console.log("\n🌊 BFS Parameters:");
