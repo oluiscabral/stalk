@@ -5,6 +5,47 @@ import fs from "fs";
 // Load environment variables
 dotenv.config();
 
+function showHelp() {
+  console.log("\n📝 Stalk Setup Instructions:");
+  console.log("1. Copy .env.example to .env");
+  console.log("2. Get a GitHub Personal Access Token from: https://github.com/settings/tokens");
+  console.log("3. Add the token to your .env file");
+  console.log('4. Make sure the token has "user:follow" scope');
+  console.log("\n🚀 Stalk Usage:");
+  console.log("   npm start                                    # Normal mutual stalking mode");
+  console.log("   npm run dry-run                              # Preview stalking strategy");
+  console.log("   npm run follow                               # Follow back only");
+  console.log("   npm run unfollow                             # Unfollow non-followers only");
+  console.log("   npm run dry-run:follow                       # Preview follow back only");
+  console.log("   npm run dry-run:unfollow                     # Preview unfollow non-followers only");
+  console.log("   npm run export                               # Export full dry run results to results.txt");
+  console.log("   npm run export:follow                        # Export follow-only dry run to follow.txt");
+  console.log("   npm run export:unfollow                      # Export unfollow-only dry run to unfollow.txt");
+  console.log("   node main.js --help                          # Show this help message");
+  console.log("   node main.js --follow-only                   # Follow back only");
+  console.log("   node main.js --unfollow-only                 # Unfollow non-followers only");
+  console.log("   node main.js --skip-follow-back              # Skip following back, only unfollow");
+  console.log("   node main.js --skip-unfollow                 # Skip unfollowing, only follow back");
+  console.log("   node main.js --skip-follow-back --skip-unfollow  # Skip both (analysis only)");
+  console.log("   node main.js --ambitious username            # BFS recursive stalking mode (infinite depth & follows)");
+  console.log("   node main.js -a username                     # Short form BFS ambitious stalking");
+  console.log("   node main.js -a username --max-depth 5       # BFS with depth limit of 5");
+  console.log("   node main.js -a username --max-follows 100   # BFS with 100 follows per user limit");
+  console.log("   node main.js -a username --max-depth 3 --max-follows 50  # BFS with both limits");
+  console.log("   node main.js -a username --skip-follow-back  # BFS only, skip mutual stalking");
+  console.log("\n🎛️  Optional Operation Controls:");
+  console.log("   --follow-only         # Only follow back users who follow you");
+  console.log("   --unfollow-only       # Only unfollow users who don't follow back");
+  console.log("   --skip-follow-back    # Skip following back users who follow you");
+  console.log("   --skip-unfollow       # Skip unfollowing users who don't follow back");
+  console.log("   --export <filename>   # Export dry run results to a file");
+  console.log("\n🌊 BFS Parameters:");
+  console.log("   --max-depth N     # Maximum stalking depth (default: infinite ∞)");
+  console.log("   --max-follows N   # Maximum followers to stalk per user (default: infinite ∞)");
+  console.log("\n🕵️ Repository: https://github.com/oluiscabral/stalk");
+  process.exit(0);
+}
+
 class StalkManager {
   constructor(token) {
     if (!token) {
@@ -730,46 +771,15 @@ class StalkManager {
 // Main execution
 async function main() {
   const token = process.env.GITHUB_TOKEN;
+  const args = process.argv.slice(2);
+
+  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+    showHelp();
+  }
 
   if (!token) {
     console.error("❌ Error: GITHUB_TOKEN environment variable is required");
-    console.log("\n📝 Stalk Setup Instructions:");
-    console.log("1. Copy .env.example to .env");
-    console.log("2. Get a GitHub Personal Access Token from: https://github.com/settings/tokens");
-    console.log("3. Add the token to your .env file");
-    console.log('4. Make sure the token has "user:follow" scope');
-    console.log("\n🚀 Stalk Usage:");
-    console.log("   npm start                                    # Normal mutual stalking mode");
-    console.log("   npm run dry-run                              # Preview stalking strategy");
-    console.log("   npm run follow                               # Follow back only");
-    console.log("   npm run unfollow                             # Unfollow non-followers only");
-    console.log("   npm run dry-run:follow                       # Preview follow back only");
-    console.log("   npm run dry-run:unfollow                     # Preview unfollow non-followers only");
-    console.log("   npm run export                               # Export full dry run results to results.txt");
-    console.log("   npm run export:follow                        # Export follow-only dry run to follow.txt");
-    console.log("   npm run export:unfollow                      # Export unfollow-only dry run to unfollow.txt");
-    console.log("   node main.js --follow-only                   # Follow back only");
-    console.log("   node main.js --unfollow-only                 # Unfollow non-followers only");
-    console.log("   node main.js --skip-follow-back              # Skip following back, only unfollow");
-    console.log("   node main.js --skip-unfollow                 # Skip unfollowing, only follow back");
-    console.log("   node main.js --skip-follow-back --skip-unfollow  # Skip both (analysis only)");
-    console.log("   node main.js --ambitious username            # BFS recursive stalking mode (infinite depth & follows)");
-    console.log("   node main.js -a username                     # Short form BFS ambitious stalking");
-    console.log("   node main.js -a username --max-depth 5       # BFS with depth limit of 5");
-    console.log("   node main.js -a username --max-follows 100   # BFS with 100 follows per user limit");
-    console.log("   node main.js -a username --max-depth 3 --max-follows 50  # BFS with both limits");
-    console.log("   node main.js -a username --skip-follow-back  # BFS only, skip mutual stalking");
-    console.log("\n🎛️  Optional Operation Controls:");
-    console.log("   --follow-only         # Only follow back users who follow you");
-    console.log("   --unfollow-only       # Only unfollow users who don't follow back");
-    console.log("   --skip-follow-back    # Skip following back users who follow you");
-    console.log("   --skip-unfollow       # Skip unfollowing users who don't follow back");
-    console.log("   --export <filename>   # Export dry run results to a file");
-    console.log("\n🌊 BFS Parameters:");
-    console.log("   --max-depth N     # Maximum stalking depth (default: infinite ∞)");
-    console.log("   --max-follows N   # Maximum followers to stalk per user (default: infinite ∞)");
-    console.log("\n🕵️ Repository: https://github.com/oluiscabral/stalk");
-    process.exit(1);
+    showHelp();
   }
 
   const stalkManager = new StalkManager(token);
