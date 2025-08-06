@@ -1,5 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import dotenv from "dotenv";
+import fs from "fs";
 
 // Load environment variables
 dotenv.config();
@@ -26,12 +27,42 @@ class StalkManager {
     this.maxFollowsPerUser = this.parseMaxFollows();
     
     // Parse optional operation controls
-    this.skipFollowBack = process.argv.includes("--skip-follow-back");
-    this.skipUnfollow = process.argv.includes("--skip-unfollow");
+    const followOnly = process.argv.includes("--follow-only");
+    const unfollowOnly = process.argv.includes("--unfollow-only");
+
+    if (followOnly && unfollowOnly) {
+      throw new Error("Cannot use --follow-only and --unfollow-only flags simultaneously.");
+    }
+
+    if (followOnly) {
+      this.skipFollowBack = false;
+      this.skipUnfollow = true;
+    } else if (unfollowOnly) {
+      this.skipFollowBack = true;
+      this.skipUnfollow = false;
+    } else {
+      this.skipFollowBack = process.argv.includes("--skip-follow-back");
+      this.skipUnfollow = process.argv.includes("--skip-unfollow");
+    }
     
+    this.exportFile = this.getExportFile();
     this.bfsStats = { totalProcessed: 0, totalFollowed: 0, maxDepthReached: 0, levelsProcessed: 0 };
   }
 
+  getExportFile() {
+    const args = process.argv;
+    const exportIndex = args.findIndex(arg => arg === "--export");
+    
+    if (exportIndex !== -1 && exportIndex + 1 < args.length) {
+      const nextArg = args[exportIndex + 1];
+      if (!nextArg.startsWith('--')) {
+        return nextArg;
+      }
+    }
+    
+    return null;
+  }
+  
   getTargetUser() {
     const args = process.argv;
     const ambitiousIndex = args.findIndex(arg => arg === "--ambitious" || arg === "-a");
@@ -501,6 +532,26 @@ class StalkManager {
         console.log("");
       }
 
+      if (this.exportFile) {
+        if (!this.isDryRun) {
+          console.log("⚠️  Export functionality is only available in dry run mode. Add the --dry-run flag to export.");
+        } else {
+          let exportContent = "";
+          if (!this.skipFollowBack) {
+            exportContent += "Users to follow:\n";
+            exportContent += toFollow.join("\n");
+            exportContent += "\n\n";
+          }
+          if (!this.skipUnfollow) {
+            exportContent += "Users to unfollow:\n";
+            exportContent += toUnfollow.join("\n");
+          }
+          fs.writeFileSync(this.exportFile, exportContent.trim());
+          console.log(`✅ Exported results to ${this.exportFile}`);
+        }
+        return;
+      }
+      
       if (toFollow.length === 0 && toUnfollow.length === 0 && !this.isAmbitious) {
         console.log("🎉 Perfect! You have mutual stalking relationships with everyone.");
         return;
@@ -694,6 +745,9 @@ async function main() {
     console.log("   npm run unfollow                             # Unfollow non-followers only");
     console.log("   npm run dry-run:follow                       # Preview follow back only");
     console.log("   npm run dry-run:unfollow                     # Preview unfollow non-followers only");
+    console.log("   npm run export                               # Export full dry run results to results.txt");
+    console.log("   npm run export:follow                        # Export follow-only dry run to follow.txt");
+    console.log("   npm run export:unfollow                      # Export unfollow-only dry run to unfollow.txt");
     console.log("   node main.js --follow-only                   # Follow back only");
     console.log("   node main.js --unfollow-only                 # Unfollow non-followers only");
     console.log("   node main.js --skip-follow-back              # Skip following back, only unfollow");
@@ -710,6 +764,7 @@ async function main() {
     console.log("   --unfollow-only       # Only unfollow users who don't follow back");
     console.log("   --skip-follow-back    # Skip following back users who follow you");
     console.log("   --skip-unfollow       # Skip unfollowing users who don't follow back");
+    console.log("   --export <filename>   # Export dry run results to a file");
     console.log("\n🌊 BFS Parameters:");
     console.log("   --max-depth N     # Maximum stalking depth (default: infinite ∞)");
     console.log("   --max-follows N   # Maximum followers to stalk per user (default: infinite ∞)");
