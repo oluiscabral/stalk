@@ -62,9 +62,20 @@ A Node.js script that automatically manages mutual following relationships on Gi
    GITHUB_TOKEN=your_github_personal_access_token_here
    ```
 
-## 🎮 Usage (Time to Stalk!)
-
-### Standard Mutual Following Stalking
+   )
+ 
+ ## ⚙️ Stalking Operations Control
+ 
+ You can fine-tune Stalk’s behavior with vriend and flexible operational flags:
+ 
+ -   `--help` or `-h`: Shows the help message with all available commands and options.
+ -   `--follow-only`: Restricts the script to only follow back users who follow you, skipping the unfollow process entirely.
+ -   `--unfollow-only`: Limits the script to only unfollow users who do not follow you back, without following anyone.
+ -   `--export`: Saves the results of a `--dry-run` to a plain text file, allowing you to review the list of users to be followed or unfollowed before executing any action.
+ 
+ ## 🎮 Usage (Time to Stalk!)
+ 
+ ### Standard Mutual Following Stalking
 
 #### Dry Run (Recommended for Stalking Beginners)
 Preview what Stalk would do without actually following/unfollowing anyone:
@@ -76,6 +87,26 @@ npm run dry-run
 Execute the mutual follow management:
 ```bash
 npm start
+```
+
+#### Fine-Grained Control
+Stalk allows for more specific actions. If you only want to follow back users who already follow you, you can use the `--follow-only` flag. This is useful for ensuring you reciprocate all follows without altering your existing following list.
+```bash
+npm run dry-run:follow          # Preview who you will follow back
+npm run follow                  # Execute the follow-back process
+```
+Conversely, if you prefer to only unfollow users who don't follow you back, the `--unfollow-only` flag lets you clean up your following list without following anyone new.
+```bash
+npm run dry-run:unfollow        # Preview who you will unfollow
+npm run unfollow                # Execute the unfollowing process
+```
+
+#### Exporting Results
+For those who prefer to analyze stalking results offline, Stalk provides an export feature. When used with `--dry-run`, you can save the list of users to be followed or unfollowed to a text file. This is perfect for keeping records or for use in other scripts.
+```bash
+npm run export:follow           # Export list of users to follow to follow.txt
+npm run export:unfollow         # Export list of users to unfollow to unfollow.txt
+npm run export                  # Export both lists to results.txt
 ```
 
 ### Ambitious Recursive Stalking 🚀
@@ -247,6 +278,12 @@ Your GitHub token needs the `user:follow` scope to:
 **"Ambitious stalking mode requires a target username" error:**
 - Make sure to provide a username: `--ambitious username`
 - Check that the target username exists and is public
+
+**"Cannot use --follow-only and --unfollow-only flags simultaneously" error:**
+- These flags are mutually exclusive. Choose one or the other.
+
+**"Export functionality is only available in dry run mode" error:**
+- Add the `--dry-run` flag to your command to export the results.
 
 **Rate limiting errors:**
 - Stalk handles this automatically with delays
