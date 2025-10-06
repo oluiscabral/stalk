@@ -773,7 +773,7 @@ async function main() {
   const token = process.env.GITHUB_TOKEN;
   const args = process.argv.slice(2);
 
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+  if (args.includes("--help") || args.includes("-h")) {
     showHelp();
   }
 
